@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Streaming</title>
+</head>
+
+<body>
+  <h1>File reading</h1>
+  <input type="file" name="" id="file">
+  <button id="submit">submit</button>
+
+  <p>progress: <span id="progress"></span> </p>
+
+  <script>
+    const btn = document.getElementById("submit");
+    const file = document.getElementById("file")
+    const progress = document.getElementById("progress")
+
+    btn.addEventListener('click', () => {
+      const fileReader = new FileReader();
+      const fileData = file.files[0]
+
+      const fileName = Math.random() * 1000 + fileData.name
+
+      fileReader.onload = async ev => {
+        const CHUNK_SIZE = 1000; // 1kb
+        const SIZE = ev.target.result.byteLength;
+        const chunkCount = SIZE / CHUNK_SIZE;
+
+        for (let chunkId = 0; chunkId < chunkCount + 1; chunkId++) {
+          const chunk = ev.target.result.slice(chunkId * CHUNK_SIZE, chunkId * CHUNK_SIZE + CHUNK_SIZE);
+
+          const progressCount = chunkId * 100 / chunkCount;
+
+          progress.innerText = Math.round(progressCount)
+
+          await fetch("http://localhost:8001/upload", {
+            method: "POST",
+            headers: {
+              "content-type": "application/octet-stream",
+              "content-length": chunk.length,
+              "file-name": fileName
+            },
+            body: chunk
+          })
+
+        }
+      }
+
+      fileReader.readAsArrayBuffer(fileData)
+    })
+  </script>
+</body>
+
+</html>
