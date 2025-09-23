@@ -22,15 +22,17 @@
     btn.addEventListener('click', () => {
       const fileReader = new FileReader();
       const fileData = file.files[0]
+      fileReader.readAsArrayBuffer(fileData)
+
 
       const fileName = Math.random() * 1000 + fileData.name
 
       fileReader.onload = async ev => {
         const CHUNK_SIZE = 1000; // 1kb
         const SIZE = ev.target.result.byteLength;
-        const chunkCount = SIZE / CHUNK_SIZE;
+        const chunkCount = Math.floor(SIZE / CHUNK_SIZE) + 1; // increase by 1, meaning the last trip will be going with 0 as `Content-Length`
 
-        for (let chunkId = 0; chunkId < chunkCount + 1; chunkId++) {
+        for (let chunkId = 0; chunkId <= chunkCount; chunkId++) {
           const chunk = ev.target.result.slice(chunkId * CHUNK_SIZE, chunkId * CHUNK_SIZE + CHUNK_SIZE);
 
           const progressCount = chunkId * 100 / chunkCount;
@@ -50,7 +52,6 @@
         }
       }
 
-      fileReader.readAsArrayBuffer(fileData)
     })
   </script>
 </body>
