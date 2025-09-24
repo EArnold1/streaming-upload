@@ -9,26 +9,39 @@
 
 <body>
     <h1>File Streaming Upload V2</h1>
-    <input type="file" name="" id="file">
+    <input type="file" name="file-input" id="file">
     <button id="submit">submit</button>
+    <label for="size">
+        Select chunk size
+    </label>
+    <select name="size" id="chunk-size">
+        <option value="1">1kb</option>
+        <option value="1000" selected>1mb</option>
+        <option value="100000">10mb</option>
+        <option value="1000000">100mb</option>
+    </select>
 
-    <p>progress: <span id="progress"></span> </p>
+    <p>progress: <span id="progress">0</span> </p>
 
     <script>
         const btn = document.getElementById("submit");
         const file = document.getElementById("file")
         const progress = document.getElementById("progress")
+        const chunkInput = document.getElementById("chunk-size")
 
         btn.addEventListener('click', () => {
+
             const fileReader = new FileReader();
             const fileData = file.files[0]
             fileReader.readAsArrayBuffer(fileData)
 
 
-            const fileName = Math.random() * 1000 + fileData.name
+            let fileName = Math.random() * 1000 + fileData.name
+            fileName = fileName.trim()
 
             fileReader.onload = async ev => {
-                const CHUNK_SIZE = 1000; // 1kb
+                const chunkValue = chunkInput?.value ?? 1;
+                const CHUNK_SIZE = chunkValue * 1000;
                 const SIZE = ev.target.result.byteLength;
                 const chunkCount = Math.floor(SIZE / CHUNK_SIZE) + 1; // increase by 1, meaning the last trip will be going with 0 as `Content-Length`
 

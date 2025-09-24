@@ -10,9 +10,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "dependencies": {
-    "@aws-sdk/lib-storage": "^3.588.0"
-  },
   "devDependencies": {
     "nodemon": "^3.1.3"
   }
