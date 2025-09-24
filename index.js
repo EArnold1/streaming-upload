@@ -43,6 +43,11 @@ const httpServer = http.createServer((req, res) => {
     });
   }
 
+  if (req.url === '/upload' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    return res.end(fs.readFileSync('./public/upload.html'));
+  }
+
   if (req.url === '/v2/upload' && req.method === 'POST') {
     const fileName = req.headers['file-name'];
 
@@ -82,7 +87,7 @@ const httpServer = http.createServer((req, res) => {
 
   if (req.url === '/v2/upload' && req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'text/html' });
-    return res.end(fs.readFileSync('./public/upload.html'));
+    return res.end(fs.readFileSync('./public/upload-v2.html'));
   }
 
   if (!['/', '/upload', '/v2/upload'].includes(req.url)) {

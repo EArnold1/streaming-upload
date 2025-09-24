@@ -4,56 +4,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Streaming</title>
+  <title>Document</title>
 </head>
 
 <body>
-  <h1>File Streaming Upload</h1>
-  <input type="file" name="" id="file">
-  <button id="submit">submit</button>
-
-  <p>progress: <span id="progress"></span> </p>
-
-  <script>
-    const btn = document.getElementById("submit");
-    const file = document.getElementById("file")
-    const progress = document.getElementById("progress")
-
-    btn.addEventListener('click', () => {
-      const fileReader = new FileReader();
-      const fileData = file.files[0]
-      fileReader.readAsArrayBuffer(fileData)
-
-
-      const fileName = Math.random() * 1000 + fileData.name
-
-      fileReader.onload = async ev => {
-        const CHUNK_SIZE = 1000; // 1kb
-        const SIZE = ev.target.result.byteLength;
-        const chunkCount = Math.floor(SIZE / CHUNK_SIZE) + 1; // increase by 1, meaning the last trip will be going with 0 as `Content-Length`
-
-        for (let chunkId = 0; chunkId <= chunkCount; chunkId++) {
-          const chunk = ev.target.result.slice(chunkId * CHUNK_SIZE, chunkId * CHUNK_SIZE + CHUNK_SIZE);
-
-          const progressCount = chunkId * 100 / chunkCount;
-
-          progress.innerText = Math.round(progressCount)
-
-          await fetch("http://localhost:8001/upload", {
-            method: "POST",
-            headers: {
-              "content-type": "application/octet-stream",
-              "content-length": chunk.length,
-              "file-name": fileName
-            },
-            body: chunk
-          })
-
-        }
-      }
-
-    })
-  </script>
+  <div>
+    <h1>Streaming upload examples</h1>
+    <p>
+      This project demonstrates a simple Node.js server and client-side web interface for uploading large files in
+      chunks
+      using HTTP streaming. It supports two upload endpoints: a basic <a href="/upload">`/upload`</a> and an improved <a
+        href="/v2/upload">`/v2/upload`</a> with chunked,
+      resumable uploads and pause/resume functionality.
+    </p>
+    <a href="/upload">V1</a>
+    <a href="/v2/upload">V2</a>
+  </div>
 </body>
 
 </html>

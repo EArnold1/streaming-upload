@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Streaming</title>
+</head>
+
+<body>
+    <h1>File Streaming Upload V2</h1>
+    <form id="form">
+        <input type="file" name="file-input" id="file" required>
+        <button type="submit">submit</button>
+        <label for="size">
+            Select chunk size
+        </label>
+        <select name="size" id="chunk-size">
+            <option value="1">1kb</option>
+            <option value="1000" selected>1mb</option>
+            <option value="100000">10mb</option>
+            <option value="1000000">100mb</option>
+        </select>
+    </form>
+
+    <button id="control">pause</button>
+
+
+    <p>progress: <span id="progress">0</span> </p>
+
+    <script>
+        const form = document.getElementById("form");
+        const controlBtn = document.getElementById("control");
+        const file = document.getElementById("file")
+        const progress = document.getElementById("progress")
+        const chunkInput = document.getElementById("chunk-size")
+
+        let chunkSize, fileSize, chunkCount, fileBuffer, fileName,
+            currentChunkIndex = 0, isPaused = false;
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault()
+            // reset state
+            isPaused = false;
+            currentChunkIndex = 0;
+            progress.innerText = 0;
+            controlBtn.innerText = 'pause';
+
+            const fileReader = new FileReader();
+            const fileData = file.files[0]
+            fileReader.readAsArrayBuffer(fileData)
+
+            fileName = Math.random() * 1000 + fileData.name
+            fileName = fileName.trim()
+
+            fileReader.onload = async ev => {
+                chunkSize = chunkInput?.value ?? 1;
+                chunkSize = chunkSize * 1000;
+
+                fileSize = ev.target.result.byteLength;
+                fileBuffer = ev.target.result;
+                chunkCount = Math.floor(fileSize / chunkSize) + 1;
+
+
+                uploadChunks();
+            }
+        });
+
+        controlBtn.addEventListener('click', () => {
+            if (!isPaused) {
+                isPaused = true;
+                controlBtn.innerText = 'resume';
+            } else {
+                isPaused = false;
+                controlBtn.innerText = 'pause';
+                uploadChunks();
+            }
+        });
+
+        const uploadChunks = async () => {
+            if (uploadChunks.isRunning) return; // avoid data race in case the 'resume' button is clicked multiple times
+            uploadChunks.isRunning = true;
+
+            while (currentChunkIndex <= chunkCount) {
+                if (isPaused) {
+                    uploadChunks.isRunning = false;
+                    return;
+                }
+                const chunk = fileBuffer.slice(currentChunkIndex * chunkSize, currentChunkIndex * chunkSize + chunkSize)
+                const progressCount = currentChunkIndex * 100 / chunkCount;
+                progress.innerText = Math.round(progressCount)
+
+                await handleUpload(chunk, fileName)
+
+                currentChunkIndex++
+            }
+            uploadChunks.isRunning = false;
+        }
+        uploadChunks.isRunning = false;
+
+        const handleUpload = async (chunk, fileName) => {
+            await fetch("http://localhost:8001/v2/upload", {
+                method: "POST",
+                headers: {
+                    "content-type": "application/octet-stream",
+                    "content-length": chunk.length,
+                    "file-name": fileName
+                },
+                body: chunk
+            })
+        }
+    </script>
+
+
+
+</body>
+
+</html>

@@ -8,111 +8,52 @@
 </head>
 
 <body>
-    <h1>File Streaming Upload V2</h1>
-    <form id="form">
-        <input type="file" name="file-input" id="file" required>
-        <button type="submit">submit</button>
-        <label for="size">
-            Select chunk size
-        </label>
-        <select name="size" id="chunk-size">
-            <option value="1">1kb</option>
-            <option value="1000" selected>1mb</option>
-            <option value="100000">10mb</option>
-            <option value="1000000">100mb</option>
-        </select>
-    </form>
+    <h1>File Streaming Upload</h1>
+    <input type="file" name="" id="file">
+    <button id="submit">submit</button>
 
-    <button id="control">pause</button>
-
-
-    <p>progress: <span id="progress">0</span> </p>
+    <p>progress: <span id="progress"></span> </p>
 
     <script>
-        const form = document.getElementById("form");
-        const controlBtn = document.getElementById("control");
+        const btn = document.getElementById("submit");
         const file = document.getElementById("file")
         const progress = document.getElementById("progress")
-        const chunkInput = document.getElementById("chunk-size")
 
-        let chunkSize, fileSize, chunkCount, fileBuffer, fileName,
-            currentChunkIndex = 0, isPaused = false;
-
-        form.addEventListener('submit', (e) => {
-            e.preventDefault()
-            // reset state
-            isPaused = false;
-            currentChunkIndex = 0;
-            progress.innerText = 0;
-            controlBtn.innerText = 'pause';
-
+        btn.addEventListener('click', () => {
             const fileReader = new FileReader();
             const fileData = file.files[0]
             fileReader.readAsArrayBuffer(fileData)
 
-            fileName = Math.random() * 1000 + fileData.name
-            fileName = fileName.trim()
+
+            const fileName = Math.random() * 1000 + fileData.name
 
             fileReader.onload = async ev => {
-                chunkSize = chunkInput?.value ?? 1;
-                chunkSize = chunkSize * 1000;
+                const CHUNK_SIZE = 1000; // 1kb
+                const SIZE = ev.target.result.byteLength;
+                const chunkCount = Math.floor(SIZE / CHUNK_SIZE) + 1; // increase by 1, meaning the last trip will be going with 0 as `Content-Length`
 
-                fileSize = ev.target.result.byteLength;
-                fileBuffer = ev.target.result;
-                chunkCount = Math.floor(fileSize / chunkSize) + 1;
+                for (let chunkId = 0; chunkId <= chunkCount; chunkId++) {
+                    const chunk = ev.target.result.slice(chunkId * CHUNK_SIZE, chunkId * CHUNK_SIZE + CHUNK_SIZE);
 
+                    const progressCount = chunkId * 100 / chunkCount;
 
-                uploadChunks();
-            }
-        });
+                    progress.innerText = Math.round(progressCount)
 
-        controlBtn.addEventListener('click', () => {
-            if (!isPaused) {
-                isPaused = true;
-                controlBtn.innerText = 'resume';
-            } else {
-                isPaused = false;
-                controlBtn.innerText = 'pause';
-                uploadChunks();
-            }
-        });
+                    await fetch("http://localhost:8001/upload", {
+                        method: "POST",
+                        headers: {
+                            "content-type": "application/octet-stream",
+                            "content-length": chunk.length,
+                            "file-name": fileName
+                        },
+                        body: chunk
+                    })
 
-        const uploadChunks = async () => {
-            if (uploadChunks.isRunning) return; // avoid data race in case the 'resume' button is clicked multiple times
-            uploadChunks.isRunning = true;
-
-            while (currentChunkIndex <= chunkCount) {
-                if (isPaused) {
-                    uploadChunks.isRunning = false;
-                    return;
                 }
-                const chunk = fileBuffer.slice(currentChunkIndex * chunkSize, currentChunkIndex * chunkSize + chunkSize)
-                const progressCount = currentChunkIndex * 100 / chunkCount;
-                progress.innerText = Math.round(progressCount)
-
-                await handleUpload(chunk, fileName)
-
-                currentChunkIndex++
             }
-            uploadChunks.isRunning = false;
-        }
-        uploadChunks.isRunning = false;
 
-        const handleUpload = async (chunk, fileName) => {
-            await fetch("http://localhost:8001/v2/upload", {
-                method: "POST",
-                headers: {
-                    "content-type": "application/octet-stream",
-                    "content-length": chunk.length,
-                    "file-name": fileName
-                },
-                body: chunk
-            })
-        }
+        })
     </script>
-
-
-
 </body>
 
 </html>
