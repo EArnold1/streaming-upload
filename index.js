@@ -1,22 +1,21 @@
 const http = require('http');
 const fs = require('fs');
 const { Buffer } = require('node:buffer');
-const httpServer = http.createServer();
 const { mkdir } = require('node:fs');
 const path = require('path');
 
 // memory storage
-let storage = {};
+const storage = {};
 
-httpServer.on('listening', () => console.log('listening'));
-
-httpServer.on('request', (req, res) => {
+const httpServer = http.createServer((req, res) => {
   if (req.url === '/') {
-    return res.end(fs.readFileSync('index.html'));
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    return res.end(fs.readFileSync('./public/index.html'));
   }
 
-  if (req.url === '/upload') {
+  if (req.url === '/upload' && req.method === 'POST') {
     const fileName = req.headers['file-name'];
+
     if (!storage[fileName]) {
       storage[fileName] = [];
     } // create empty entry
@@ -38,11 +37,62 @@ httpServer.on('request', (req, res) => {
         ); //  write file
 
         storage[fileName] = []; // clear storage
-        console.log('upload completed');
+        console.info('upload completed');
       }
-      res.end();
+      return res.end();
     });
   }
+
+  if (req.url === '/v2/upload' && req.method === 'POST') {
+    const fileName = req.headers['file-name'];
+
+    const filePath = path.join(process.cwd(), 'tmp', 'uploads', fileName);
+
+    // make sure file exists (creates the file if it doesn't exist)
+    mkdir(path.dirname(filePath), { recursive: true }, (err) => {
+      if (err) throw err;
+    });
+
+    const writeStream = fs.createWriteStream(filePath, { flags: 'a' }); // 'a' flag is used to create a write stream to append
+
+    req.on('data', (chunk) => {
+      if (!writeStream.write(chunk)) {
+        req.pause();
+      }
+    });
+
+    // The "drain" event is emitted when the internal buffer of
+    // the writable stream has been emptied enough that it can accept more data.
+    writeStream.on('drain', () => {
+      req.resume();
+    });
+
+    writeStream.on('finish', () => {
+      console.info('INFO: finish event emitted');
+      writeStream.close();
+    });
+
+    req.on('end', () => {
+      writeStream.end();
+      console.info('INFO: upload completed');
+
+      return res.end();
+    });
+  }
+
+  if (req.url === '/v2/upload' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    return res.end(fs.readFileSync('./public/upload.html'));
+  }
+
+  if (!['/', '/upload', '/v2/upload'].includes(req.url)) {
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({ message: 'resource not found' }));
+  }
+
+  return null;
 });
 
-httpServer.listen(8001);
+const PORT = 8001;
+
+httpServer.listen(PORT, () => console.info(`Server running on port ${PORT}`));
